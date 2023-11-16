@@ -1,191 +1,108 @@
 #include <iostream>
-#include <queue>
-#include <set>
-#include <map>
+#include <vector>
+#include <unordered_set>
 using namespace std;
 
-struct Estado
-{
-    int qtdAgua_a;
-    int qtdAgua_b;
-    int qtdAgua_c;
-
-    bool operator<(const Estado& other) const
-    {
-        if (qtdAgua_a != other.qtdAgua_a)
-            return qtdAgua_a < other.qtdAgua_a;
-        if (qtdAgua_b != other.qtdAgua_b)
-            return qtdAgua_b < other.qtdAgua_b;
-        return qtdAgua_c < other.qtdAgua_c;
-    }
-
-    bool operator==(const Estado& other) const
-    {
-        return qtdAgua_a == other.qtdAgua_a &&
-               qtdAgua_b == other.qtdAgua_b &&
-               qtdAgua_c == other.qtdAgua_c;
+struct State {
+    int a, b, c;
+    State(int _a, int _b, int _c) : a(_a), b(_b), c(_c) {}
+    bool operator==(const State& other) const {
+        return (a == other.a && b == other.b && c == other.c);
     }
 };
 
-bool isObjetivo(const Estado& estado)
-{
-    return (estado.qtdAgua_a == 4 && estado.qtdAgua_b == 4);
+namespace std {
+    template <>
+    struct hash<State> {
+        size_t operator()(const State& s) const {
+            return hash<int>()(s.a) ^ hash<int>()(s.b) ^ hash<int>()(s.c);
+        }
+    };
 }
 
-vector<Estado> GerarProxEstado(const Estado& atual)
-{
-    vector<Estado> proxEstados;
-
-    // Pour water from jug a to jug b
-    if (atual.qtdAgua_a > 0 && atual.qtdAgua_b < 5)
-    {
-        Estado proxEstado = atual;
-        int capacidadeSobrando = 5 - proxEstado.qtdAgua_b;
-
-        if (proxEstado.qtdAgua_a <= capacidadeSobrando)
-        {
-            proxEstado.qtdAgua_b += proxEstado.qtdAgua_a;
-            proxEstado.qtdAgua_a = 0;
-        }
-        else
-        {
-            proxEstado.qtdAgua_b = 5;
-            proxEstado.qtdAgua_a -= capacidadeSobrando;
-        }
-        proxEstados.push_back(proxEstado);
-    }
-
-    // Pour water from jug b to jug a
-    if (atual.qtdAgua_b > 0 && atual.qtdAgua_a < 8)
-    {
-        Estado proxEstado = atual;
-        int capacidadeSobrando = 8 - proxEstado.qtdAgua_a;
-
-        if (proxEstado.qtdAgua_b <= capacidadeSobrando)
-        {
-            proxEstado.qtdAgua_a += proxEstado.qtdAgua_b;
-            proxEstado.qtdAgua_b = 0;
-        }
-        else
-        {
-            proxEstado.qtdAgua_a = 8;
-            proxEstado.qtdAgua_b -= capacidadeSobrando;
-        }
-        proxEstados.push_back(proxEstado);
-    }
-
-    // Pour water from jug a to jug c
-    if (atual.qtdAgua_a > 0 && atual.qtdAgua_c < 3)
-    {
-        Estado proxEstado = atual;
-        int capacidadeSobrando = 3 - proxEstado.qtdAgua_c;
-
-        if (proxEstado.qtdAgua_a <= capacidadeSobrando)
-        {
-            proxEstado.qtdAgua_c += proxEstado.qtdAgua_a;
-            proxEstado.qtdAgua_a = 0;
-        }
-        else
-        {
-            proxEstado.qtdAgua_c = 3;
-            proxEstado.qtdAgua_a -= capacidadeSobrando;
-        }
-        proxEstados.push_back(proxEstado);
-    }
-
-    // Pour water from jug c to jug a
-    if (atual.qtdAgua_c > 0 && atual.qtdAgua_a < 8)
-    {
-        Estado proxEstado = atual;
-        int capacidadeSobrando = 8 - proxEstado.qtdAgua_a;
-
-        if (proxEstado.qtdAgua_c <= capacidadeSobrando)
-        {
-            proxEstado.qtdAgua_a += proxEstado.qtdAgua_c;
-            proxEstado.qtdAgua_c = 0;
-        }
-        else
-        {
-            proxEstado.qtdAgua_a = 8;
-            proxEstado.qtdAgua_c -= capacidadeSobrando;
-        }
-        proxEstados.push_back(proxEstado);
-    }
-
-    // Pour water from jug b to jug c
-    if (atual.qtdAgua_b > 0 && atual.qtdAgua_c < 3)
-    {
-        Estado proxEstado = atual;
-        int capacidadeSobrando = 3 - proxEstado.qtdAgua_c;
-
-        if (proxEstado.qtdAgua_b <= capacidadeSobrando)
-        {
-            proxEstado.qtdAgua_c += proxEstado.qtdAgua_b;
-            proxEstado.qtdAgua_b = 0;
-        }
-        else
-        {
-            proxEstado.qtdAgua_c = 3;
-            proxEstado.qtdAgua_b -= capacidadeSobrando;
-        }
-        proxEstados.push_back(proxEstado);
-    }
-
-    // Pour water from jug c to jug b
-    if (atual.qtdAgua_c > 0 && atual.qtdAgua_b < 5)
-    {
-        Estado proxEstado = atual;
-        int capacidadeSobrando = 5 - proxEstado.qtdAgua_b;
-
-        if (proxEstado.qtdAgua_c <= capacidadeSobrando)
-        {
-            proxEstado.qtdAgua_b += proxEstado.qtdAgua_c;
-            proxEstado.qtdAgua_c = 0;
-        }
-        else
-        {
-            proxEstado.qtdAgua_b = 5;
-            proxEstado.qtdAgua_c -= capacidadeSobrando;
-        }
-        proxEstados.push_back(proxEstado);
-    }
-
-    return proxEstados;
+bool isGoalState(const State& s) {
+    return (s.a == 4 && s.b == 4);
 }
 
-bool RecursiveDLS(const Estado& atual, int limite, map<Estado, Estado>& EstadoAnterior)
-{
-    if (isObjetivo(atual))
-    {
-        cout << "Sequencia" << endl;
-        vector<Estado> sequencia;
+bool isValidState(const State& s) {
+    return (s.a >= 0 && s.b >= 0 && s.c >= 0 &&
+            s.a <= 8 && s.b <= 5 && s.c <= 3);
+}
 
-        while (!(atual == Estado{8, 0, 0}))
-        {
-            sequencia.push_back(atual);
-            atual == EstadoAnterior[atual];
-        }
-        sequencia.push_back(Estado{8, 0, 0});
+void printPath(const vector<State>& path) {
+    for (const auto& state : path) {
+        cout << "A:" << state.a << " B:" << state.b << " C:" << state.c << endl;
+    }
+}
 
-        for (int i = sequencia.size() - 1; i >= 0; i--)
-        {
-            Estado aux = sequencia[i];
-            cout << aux.qtdAgua_a << " " << aux.qtdAgua_b << " " << aux.qtdAgua_c << endl;
-        }
+bool depthLimitedSearch(State currentState, int depth, int maxDepth, unordered_set<State>& visited, vector<State>& path) {
+    if (isGoalState(currentState)) {
+        path.push_back(currentState);
         return true;
     }
 
-    if (limite == 0)
-    {
+    if (depth == maxDepth) {
         return false;
     }
 
-    vector<Estado> proxEstados = GerarProxEstado(atual);
+    visited.insert(currentState);
 
-    for (const auto& proxEstado : proxEstados)
-    {
-        if (RecursiveDLS(proxEstado, limite - 1, EstadoAnterior))
-        {
+    // Pour water from A to B
+    if (currentState.a > 0 && currentState.b < 5) {
+        int amount = min(currentState.a, 5 - currentState.b);
+        State newState(currentState.a - amount, currentState.b + amount, currentState.c);
+        if (visited.find(newState) == visited.end() && depthLimitedSearch(newState, depth + 1, maxDepth, visited, path)) {
+            path.push_back(currentState);
+            return true;
+        }
+    }
+
+    // Pour water from A to C
+    if (currentState.a > 0 && currentState.c < 3) {
+        int amount = min(currentState.a, 3 - currentState.c);
+        State newState(currentState.a - amount, currentState.b, currentState.c + amount);
+        if (visited.find(newState) == visited.end() && depthLimitedSearch(newState, depth + 1, maxDepth, visited, path)) {
+            path.push_back(currentState);
+            return true;
+        }
+    }
+
+    // Pour water from B to A
+    if (currentState.b > 0 && currentState.a < 8) {
+        int amount = min(currentState.b, 8 - currentState.a);
+        State newState(currentState.a + amount, currentState.b - amount, currentState.c);
+        if (visited.find(newState) == visited.end() && depthLimitedSearch(newState, depth + 1, maxDepth, visited, path)) {
+            path.push_back(currentState);
+            return true;
+        }
+    }
+
+    // Pour water from B to C
+    if (currentState.b > 0 && currentState.c < 3) {
+        int amount = min(currentState.b, 3 - currentState.c);
+        State newState(currentState.a, currentState.b - amount, currentState.c + amount);
+        if (visited.find(newState) == visited.end() && depthLimitedSearch(newState, depth + 1, maxDepth, visited, path)) {
+            path.push_back(currentState);
+            return true;
+        }
+    }
+
+    // Pour water from C to A
+    if (currentState.c > 0 && currentState.a < 8) {
+        int amount = min(currentState.c, 8 - currentState.a);
+        State newState(currentState.a + amount, currentState.b, currentState.c - amount);
+        if (visited.find(newState) == visited.end() && depthLimitedSearch(newState, depth + 1, maxDepth, visited, path)) {
+            path.push_back(currentState);
+            return true;
+        }
+    }
+
+    // Pour water from C to B
+    if (currentState.c > 0 && currentState.b < 5) {
+        int amount = min(currentState.c, 5 - currentState.b);
+        State newState(currentState.a, currentState.b + amount, currentState.c - amount);
+        if (visited.find(newState) == visited.end() && depthLimitedSearch(newState, depth + 1, maxDepth, visited, path)) {
+            path.push_back(currentState);
             return true;
         }
     }
@@ -193,27 +110,23 @@ bool RecursiveDLS(const Estado& atual, int limite, map<Estado, Estado>& EstadoAn
     return false;
 }
 
-bool DepthLimitedSearch(int limite)
-{
-    map<Estado, Estado> EstadoAnterior;
-    Estado estadoInicial = {8, 0, 0};
+bool DepthLimitedSearch() {
+    State initialState(8, 0, 0);
+    int maxDepth = 10; //Informar a profundidade maxima se necessario
+    unordered_set<State> visited;
+    vector<State> path;
 
-    if (!RecursiveDLS(estadoInicial, limite, EstadoAnterior))
-    {
-        cout << "Nao foi possivel resolver dentro do limite de profundidade " << limite << endl;
+    if (depthLimitedSearch(initialState, 0, maxDepth, visited, path)) {
+        cout << "Solucao encontrada:\n";
+        printPath(path);
+        return true;
+    } else {
+        cout << "Solucao nao encontrada com o limite de profundidade.\n";
         return false;
     }
-
-    return true;
 }
 
-int main()
-{
-    int limite = 10; // Defina o limite de profundidade desejado aqui
-    if (DepthLimitedSearch(limite))
-    {
-        cout << "Solucao encontrada!" << endl;
-    }
-    
+int main() {
+    DepthLimitedSearch();
     return 0;
 }
